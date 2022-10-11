@@ -6,14 +6,27 @@ use actix_web::web::Data;
 use actix_web_lab::respond::Html;
 use juniper::http::graphiql::graphiql_source;
 use juniper::http::GraphQLRequest;
+use crate::context::GraphQLContext;
+use crate::db::{get_pool, PostgresPool};
 use crate::schema::{create_schema, Schema};
 
 
 mod schema;
+mod db;
+mod context;
+mod diesel_schema;
 
 #[route("/graphql", method = "GET", method = "POST")]
-async fn graphql(st: web::Data<Schema>, data: web::Json<GraphQLRequest>) -> impl Responder {
-    let user = data.execute(&st, &()).await;
+async fn graphql(
+    pool: Data<PostgresPool>,
+    st: Data<Schema>,
+    data: web::Json<GraphQLRequest>,
+) -> impl Responder {
+    let ctx = GraphQLContext {
+        pool: pool.get_ref().to_owned(),
+    };
+
+    let user = data.execute(&st, &ctx).await;
     HttpResponse::Ok().json(user)
 }
 
@@ -31,8 +44,11 @@ async fn main() -> io::Result<()> {
     log::info!("starting HTTP server on port 8080");
     log::info!("GraphiQL playground: http://localhost:8080/graphiql");
 
+    let pool = get_pool();
+
     HttpServer::new(move || {
         App::new()
+            .app_data(Data::new(pool.clone()))
             .app_data(Data::from(schema.clone()))
             .service(graphql)
             .service(graphql_playground)

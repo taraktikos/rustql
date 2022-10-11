@@ -1,5 +1,6 @@
 use juniper::{EmptySubscription, FieldResult, graphql_object, RootNode};
 use juniper::{GraphQLEnum, GraphQLInputObject, GraphQLObject};
+use crate::context::GraphQLContext;
 
 #[derive(GraphQLEnum)]
 enum Episode {
@@ -28,9 +29,9 @@ struct NewHuman {
 
 pub struct QueryRoot;
 
-#[graphql_object]
+#[graphql_object(context=GraphQLContext)]
 impl QueryRoot {
-    fn human(_id: String) -> FieldResult<Human> {
+    fn human(_context: &GraphQLContext, _id: String) -> FieldResult<Human> {
         Ok(Human {
             id: "123".to_string(),
             name: "Humanoid".to_string(),
@@ -42,9 +43,9 @@ impl QueryRoot {
 
 pub struct MutationRoot;
 
-#[graphql_object]
+#[graphql_object(context=GraphQLContext)]
 impl MutationRoot {
-    fn crate_human(new_human: NewHuman) -> FieldResult<Human> {
+    fn create_human(new_human: NewHuman) -> FieldResult<Human> {
         Ok(Human {
             id: "1234".to_string(),
             name: new_human.name,
@@ -57,5 +58,5 @@ impl MutationRoot {
 pub type Schema = RootNode<'static, QueryRoot, MutationRoot, EmptySubscription>;
 
 pub fn create_schema() -> Schema {
-    Schema::new(QueryRoot {}, MutationRoot {}, EmptySubscription::new())
+    Schema::new(QueryRoot, MutationRoot, EmptySubscription::new())
 }
