@@ -1,0 +1,35 @@
+### Simple Query
+GRAPHQL http://{{host}}/graphql
+Content-Type: application/graphql
+
+query {
+  human(id: "100") {
+    id
+    name
+    appearsIn
+    homePlanet
+  }
+}
+
+### Simple Mutation
+GRAPHQL http://{{host}}/graphql
+Content-Type: application/graphql
+
+mutation CreateHuman($newHuman: NewHuman!) {
+  crateHuman(newHuman: $newHuman){
+    id
+    name
+    appearsIn
+    homePlanet
+  }
+}
+
+{
+  "newHuman": {
+    "name": "Name",
+    "appearsIn": [
+      "JEDI"
+    ],
+    "homePlanet": "test"
+  }
+}
