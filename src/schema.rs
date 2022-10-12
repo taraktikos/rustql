@@ -1,4 +1,5 @@
-use juniper::{EmptySubscription, FieldResult, graphql_object, RootNode};
+use std::pin::Pin;
+use juniper::{FieldError, FieldResult, futures, graphql_object, graphql_subscription, RootNode};
 use juniper::{GraphQLEnum, GraphQLInputObject, GraphQLObject};
 use crate::context::GraphQLContext;
 
@@ -29,7 +30,7 @@ struct NewHuman {
 
 pub struct QueryRoot;
 
-#[graphql_object(context=GraphQLContext)]
+#[graphql_object(context = GraphQLContext)]
 impl QueryRoot {
     fn human(_context: &GraphQLContext, _id: String) -> FieldResult<Human> {
         Ok(Human {
@@ -43,7 +44,7 @@ impl QueryRoot {
 
 pub struct MutationRoot;
 
-#[graphql_object(context=GraphQLContext)]
+#[graphql_object(context = GraphQLContext)]
 impl MutationRoot {
     fn create_human(new_human: NewHuman) -> FieldResult<Human> {
         Ok(Human {
@@ -55,8 +56,30 @@ impl MutationRoot {
     }
 }
 
-pub type Schema = RootNode<'static, QueryRoot, MutationRoot, EmptySubscription>;
+pub struct Subscription;
+
+type HumanStream = Pin<Box<dyn futures::Stream<Item=Result<Human, FieldError>> + Send>>;
+
+#[graphql_subscription(context = GraphQLContext)]
+impl Subscription {
+
+    #[graphql(description = "Random human")]
+    async fn random_human(context: &GraphQLContext) -> HumanStream {
+        let stream = async_stream::stream! {
+            yield Ok(Human {
+                id: "123".to_string(),
+                name: "name".to_string(),
+                appears_in: vec![Episode::Jedi],
+                home_planet: "home".to_string(),
+            })
+        };
+        Box::pin(stream)
+    }
+
+}
+
+pub type Schema = RootNode<'static, QueryRoot, MutationRoot, Subscription>;
 
 pub fn create_schema() -> Schema {
-    Schema::new(QueryRoot, MutationRoot, EmptySubscription::new())
+    Schema::new(QueryRoot, MutationRoot, Subscription)
 }
