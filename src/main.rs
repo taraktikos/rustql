@@ -1,15 +1,18 @@
 use std::io;
 use std::sync::Arc;
+use std::time::Duration;
 use actix_cors::Cors;
-use actix_web::{App, HttpResponse, HttpServer, middleware, Responder, route, web, get};
+use actix_web::{App,HttpRequest, HttpResponse, HttpServer, middleware, Responder, route, web, get};
+use actix_web::Error;
 use actix_web::web::Data;
 use actix_web_lab::respond::Html;
 use juniper::http::graphiql::graphiql_source;
 use juniper::http::GraphQLRequest;
-use crate::context::GraphQLContext;
-use crate::db::{get_pool, PostgresPool};
-use crate::schema::{create_schema, Schema};
-
+use context::GraphQLContext;
+use db::{get_pool, PostgresPool};
+use schema::{create_schema, Schema};
+use juniper_graphql_ws::ConnectionConfig;
+use juniper_actix::{ subscriptions::subscriptions_handler};
 
 mod schema;
 mod db;
@@ -30,9 +33,27 @@ async fn graphql(
     HttpResponse::Ok().json(user)
 }
 
+async fn subscriptions(
+    pool: Data<PostgresPool>,
+    req: HttpRequest,
+    stream: web::Payload,
+    schema: web::Data<Schema>,
+) -> Result<HttpResponse, Error> {
+    let ctx = GraphQLContext {
+        pool: pool.get_ref().to_owned(),
+    };
+    let schema = schema.into_inner();
+    let config = ConnectionConfig::new(ctx);
+    // set the keep alive interval to 15 secs so that it doesn't timeout in playground
+    // playground has a hard-coded timeout set to 20 secs
+    let config = config.with_keep_alive_interval(Duration::from_secs(15));
+
+    subscriptions_handler(req, stream, schema, config).await
+}
+
 #[get("/graphiql")]
 async fn graphql_playground() -> impl Responder {
-    Html(graphiql_source("/graphql", None))
+    Html(graphiql_source("/graphql", Some("/subscriptions")))
 }
 
 #[actix_web::main]
@@ -52,6 +73,7 @@ async fn main() -> io::Result<()> {
             .app_data(Data::from(schema.clone()))
             .service(graphql)
             .service(graphql_playground)
+            .service(web::resource("/subscriptions").route(web::get().to(subscriptions)))
             .wrap(Cors::permissive())
             .wrap(middleware::Logger::default())
     })

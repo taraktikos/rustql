@@ -10,11 +10,12 @@ actix-web = "4"
 actix-web-lab = "0.18.3"
 actix-cors = "0.6"
 
+futures = "0.3"
 async-stream = "*"
 
-juniper = "*"
-juniper_actix = "*"
-juniper_graphql_ws = "*"
+juniper = { git = 'https://github.com/graphql-rust/juniper', package = "juniper", rev = "e0ddeecf" }
+juniper_actix = { git = 'https://github.com/graphql-rust/juniper', package = "juniper_actix", rev = "e0ddeecf", features = ["subscriptions"] }
+juniper_graphql_ws = { git = 'https://github.com/graphql-rust/juniper', package = "juniper_graphql_ws", rev = "e0ddeecf" }
 
 env_logger = "0.9"
 log = "0.4"
@@ -24,3 +25,4 @@ serde_json = "1"
 r2d2 = "0.8.10"
 diesel = { version = "2.0.0", features = ["postgres", "r2d2"] }
 dotenvy = "0.15"
+tokio = "1.0"

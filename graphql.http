@@ -33,3 +33,39 @@ mutation CreateHuman($newHuman: NewHuman!) {
     "homePlanet": "test"
   }
 }
+
+### Simple Subscription
+GRAPHQL http://{{host}}/graphql
+Content-Type: application/graphql
+
+mutation CreateHuman($newHuman: NewHuman!) {
+  crateHuman(newHuman: $newHuman){
+    id
+    name
+    appearsIn
+    homePlanet
+  }
+}
+
+{
+  "newHuman": {
+    "name": "Name",
+    "appearsIn": [
+      "JEDI"
+    ],
+    "homePlanet": "test"
+  }
+}
+
+### Subscriptions over WebSockets
+// WebSockets are handy for GraphQL subscriptions
+GRAPHQL http://{{host}}/graphql
+
+subscription {
+  randomHuman {
+    id
+    name
+    appearsIn
+    homePlanet
+  }
+}
