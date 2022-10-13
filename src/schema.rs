@@ -64,7 +64,7 @@ type HumanStream = Pin<Box<dyn futures::Stream<Item=Result<Human, FieldError>> +
 impl Subscription {
 
     #[graphql(description = "Random human")]
-    async fn random_human(context: &GraphQLContext) -> HumanStream {
+    async fn random_human(_context: &GraphQLContext) -> HumanStream {
         let stream = async_stream::stream! {
             yield Ok(Human {
                 id: "123".to_string(),
