@@ -3,31 +3,44 @@ GRAPHQL http://{{host}}/graphql
 Content-Type: application/graphql
 
 query {
-  human(id: "1") { ... }
+  user(id: 3) {
+    id
+    email
+  }
+}
+
+### Simple Query
+GRAPHQL http://{{host}}/graphql
+Content-Type: application/graphql
+
+query {
+  users {
+    id
+    email
+  }
 }
 
 ### Simple Mutation
 GRAPHQL http://{{host}}/graphql
 Content-Type: application/graphql
 
-mutation CreateHuman($newHuman: NewHuman!) {
-  crateHuman(newHuman: $newHuman){
+mutation CreateUser($newUser: NewUser!) {
+  createUser(newUser: $newUser){
     id
-    name
-    appearsIn
-    homePlanet
+    email
   }
 }
 
 {
-  "newHuman": {
-    "name": "Name",
-    "appearsIn": [
-      "JEDI"
-    ],
-    "homePlanet": "test"
+  "newUser": {
+    "email": "test8@example.com",
+    "password": "123456",
+    "firstName": "John",
+    "lastName": "Doe"
   }
 }
+
+
 
 ### Simple Subscription
 GRAPHQL http://{{host}}/graphql

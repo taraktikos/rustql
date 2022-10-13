@@ -1,2 +1,2 @@
-drop table "user";
+drop table users;
 drop domain email;

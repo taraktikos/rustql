@@ -1,12 +1,12 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    user (id) {
+    users (id) {
         id -> Int8,
-        email -> Nullable<Varchar>,
+        email -> Varchar,
+        password -> Bytea,
         first_name -> Nullable<Text>,
         last_name -> Nullable<Text>,
-        password -> Nullable<Bytea>,
         created_at -> Timestamptz,
         deleted_at -> Nullable<Timestamptz>,
     }
