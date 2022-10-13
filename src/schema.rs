@@ -1,7 +1,22 @@
 use std::pin::Pin;
+use diesel::prelude::*;
+use diesel::deserialize::{QueryableByName};
+use diesel::{RunQueryDsl, sql_query};
 use juniper::{FieldError, FieldResult, futures, graphql_object, graphql_subscription, RootNode};
 use juniper::{GraphQLEnum, GraphQLInputObject, GraphQLObject};
 use crate::context::GraphQLContext;
+
+diesel::table! {
+    user (id) {
+        id -> Int8,
+        email -> Nullable<Varchar>,
+        first_name -> Nullable<Text>,
+        last_name -> Nullable<Text>,
+        password -> Nullable<Bytea>,
+        created_at -> Timestamptz,
+        deleted_at -> Nullable<Timestamptz>,
+    }
+}
 
 #[derive(GraphQLEnum)]
 enum Episode {
@@ -10,6 +25,7 @@ enum Episode {
     Jedi,
 }
 
+#[table_name = "user"]
 #[derive(GraphQLObject)]
 #[graphql(description = "Human description")]
 struct Human {
@@ -32,10 +48,20 @@ pub struct QueryRoot;
 
 #[graphql_object(context = GraphQLContext)]
 impl QueryRoot {
-    fn human(_context: &GraphQLContext, _id: String) -> FieldResult<Human> {
+    fn human(context: &GraphQLContext, _id: String) -> FieldResult<Human> {
+        let mut conn = context.pool.get().unwrap();
+        let users = sql_query("SELECT * FROM users ORDER BY id").load::<Human>(&mut conn)?;
+        //    let expected_users = vec![
+        //     User { id: 1, name: "Sean".into() },
+        //     User { id: 2, name: "Tess".into() },
+        //     ];
+        // assert_eq!(Ok(expected_users), users);
+
+        let u = users.get(0).unwrap();
+
         Ok(Human {
-            id: "123".to_string(),
-            name: "Humanoid".to_string(),
+            id: u.id.to_string(),
+            name: u.name.to_string(),
             appears_in: vec![Episode::NewHope],
             home_planet: "".to_string(),
         })
