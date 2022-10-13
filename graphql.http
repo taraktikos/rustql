@@ -3,12 +3,7 @@ GRAPHQL http://{{host}}/graphql
 Content-Type: application/graphql
 
 query {
-  human(id: "100") {
-    id
-    name
-    appearsIn
-    homePlanet
-  }
+  human(id: "1") { ... }
 }
 
 ### Simple Mutation
