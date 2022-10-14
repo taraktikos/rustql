@@ -33,6 +33,41 @@ struct NewUser {
     last_name: Option<String>,
 }
 
+impl From<DBUser> for User {
+    fn from(db_user: DBUser) -> Self {
+        User {
+            id: db_user.id as i32,
+            email: db_user.email.to_string(),
+            first_name: db_user.first_name,
+            last_name: db_user.last_name,
+        }
+    }
+}
+
+impl From<&DBUser> for User {
+    fn from(db_user: &DBUser) -> Self {
+        User {
+            id: db_user.id as i32,
+            email: db_user.email.to_string(),
+            first_name: db_user.first_name.clone(),
+            last_name: db_user.last_name.clone(),
+        }
+    }
+}
+
+impl From<NewUser> for DBNewUser {
+    fn from(new_user: NewUser) -> Self {
+        Self {
+            email: new_user.email,
+            password: new_user.password.into(),
+            first_name: new_user.first_name,
+            last_name: new_user.last_name,
+            created_at: Utc::now().naive_utc(),
+            deleted_at: None,
+        }
+    }
+}
+
 pub struct QueryRoot;
 
 #[graphql_object(context = GraphQLContext)]
@@ -40,32 +75,25 @@ impl QueryRoot {
     fn user(context: &GraphQLContext, id: i32) -> FieldResult<User> {
         let mut conn = context.pool.get()?;
 
-        let user = users::table
+        let db_user = users::table
             .find(id as i64)
             .first::<DBUser>(&mut conn)?;
 
-        Ok(User {
-            id: user.id as i32,
-            email: user.email.to_string(),
-            first_name: user.first_name,
-            last_name: user.last_name,
-        })
+        Ok(db_user.into())
     }
 
     fn users(context: &GraphQLContext) -> FieldResult<Vec<User>> {
         let mut conn = context.pool.get()?;
 
-        let users = users::table
+        let db_users = users::table
             .load::<DBUser>(&mut conn)?;
 
-        let users_resp = users.iter().map(|user| User {
-            id: user.id as i32,
-            email: user.email.to_string(),
-            first_name: user.first_name.clone(),
-            last_name: user.last_name.clone(),
-        }).collect();
+        let users = db_users
+            .iter()
+            .map(Into::into)
+            .collect();
 
-        Ok(users_resp)
+        Ok(users)
     }
 }
 
@@ -74,32 +102,19 @@ pub struct MutationRoot;
 #[graphql_object(context = GraphQLContext)]
 impl MutationRoot {
     fn create_user(context: &GraphQLContext, new_user: NewUser) -> FieldResult<User> {
-        let new_user = DBNewUser {
-            email: new_user.email,
-            password: new_user.password.as_bytes().to_vec(),
-            first_name: new_user.first_name,
-            last_name: new_user.last_name,
-            created_at: Utc::now().naive_utc(),
-            deleted_at: None,
-        };
-
+        let db_new_user: DBNewUser = new_user.into();
         let mut conn = context.pool.get()?;
 
         let id = diesel::insert_into(users::table)
-            .values(&new_user)
+            .values(&db_new_user)
             .returning(users::id)
             .get_result::<i64>(&mut conn)?;
 
-        let user = users::table
+        let db_user = users::table
             .find(id)
             .first::<DBUser>(&mut conn)?;
 
-        Ok(User {
-            id: user.id as i32,
-            email: user.email.to_string(),
-            first_name: user.first_name,
-            last_name: user.last_name,
-        })
+        Ok(db_user.into())
     }
 }
 
