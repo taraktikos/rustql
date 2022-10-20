@@ -1,0 +1,35 @@
+type QueryRoot {
+  user(id: Int!): User!
+  users: [User!]!
+}
+
+type MutationRoot {
+  createUser(newUser: NewUser!): User!
+}
+
+type Subscription {
+  "Random human"
+  randomHuman: User!
+}
+
+"NewHuman description"
+input NewUser {
+  email: String!
+  password: String!
+  firstName: String
+  lastName: String
+}
+
+"Human description"
+type User {
+  id: Int!
+  email: String!
+  firstName: String
+  lastName: String
+}
+
+schema {
+  query: QueryRoot
+  mutation: MutationRoot
+  subscription: Subscription
+}

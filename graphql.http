@@ -2,7 +2,7 @@
 GRAPHQL http://{{host}}/graphql
 Content-Type: application/graphql
 
-query {
+query GetUser {
   user(id: 3) {
     id
     email
@@ -13,7 +13,7 @@ query {
 GRAPHQL http://{{host}}/graphql
 Content-Type: application/graphql
 
-query {
+query GetUsers {
   users {
     id
     email
@@ -40,40 +40,13 @@ mutation CreateUser($newUser: NewUser!) {
   }
 }
 
-
-
-### Simple Subscription
-GRAPHQL http://{{host}}/graphql
-Content-Type: application/graphql
-
-mutation CreateHuman($newHuman: NewHuman!) {
-  crateHuman(newHuman: $newHuman){
-    id
-    name
-    appearsIn
-    homePlanet
-  }
-}
-
-{
-  "newHuman": {
-    "name": "Name",
-    "appearsIn": [
-      "JEDI"
-    ],
-    "homePlanet": "test"
-  }
-}
-
 ### Subscriptions over WebSockets
 // WebSockets are handy for GraphQL subscriptions
 GRAPHQL http://{{host}}/graphql
 
-subscription {
+subscription Subscription {
   randomHuman {
     id
-    name
-    appearsIn
-    homePlanet
+    email
   }
 }

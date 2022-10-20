@@ -1,8 +1,9 @@
 use std::io;
+use std::io::{stdout, Write};
 use std::sync::Arc;
 use std::time::Duration;
 use actix_cors::Cors;
-use actix_web::{App,HttpRequest, HttpResponse, HttpServer, middleware, Responder, route, web, get};
+use actix_web::{App, HttpRequest, HttpResponse, HttpServer, middleware, Responder, route, web, get};
 use actix_web::Error;
 use actix_web::web::Data;
 use actix_web_lab::respond::Html;
@@ -12,7 +13,8 @@ use context::GraphQLContext;
 use db::{get_pool, PostgresPool};
 use schema::{create_schema, Schema};
 use juniper_graphql_ws::ConnectionConfig;
-use juniper_actix::{ subscriptions::subscriptions_handler};
+use juniper_actix::{subscriptions::subscriptions_handler};
+use clap::{Parser, Subcommand};
 
 mod schema;
 mod db;
@@ -56,10 +58,42 @@ async fn graphql_playground() -> impl Responder {
     Html(graphiql_source("/graphql", Some("/subscriptions")))
 }
 
+#[derive(Subcommand, Debug)]
+enum Action {
+    Generate,
+    Serve,
+}
+
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[command(subcommand)]
+    action: Action,
+}
+
 #[actix_web::main]
 async fn main() -> io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
+    let args = Args::parse();
+
+    match args.action {
+        Action::Generate => generate().await,
+        Action::Serve => serve().await,
+    }
+}
+
+async fn generate() -> io::Result<()> {
+    let schema = create_schema();
+    let result = schema.as_schema_language();
+
+    stdout()
+        .write(result.as_bytes())
+        .map(|_| ())
+}
+
+async fn serve() -> io::Result<()> {
     let schema = Arc::new(create_schema());
 
     log::info!("starting HTTP server on port 8080");
