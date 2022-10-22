@@ -1,5 +1,6 @@
-use std::io;
+use std::{env, io};
 use std::io::{stdout, Write};
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use actix_cors::Cors;
@@ -15,6 +16,7 @@ use schema::{create_schema, Schema};
 use juniper_graphql_ws::ConnectionConfig;
 use juniper_actix::{subscriptions::subscriptions_handler};
 use clap::{Parser, Subcommand};
+use temporal_sdk_core::{init_worker, Url, WorkerConfigBuilder, ClientOptionsBuilder, ClientOptions, telemetry_init, Logger, TelemetryOptionsBuilder, TelemetryOptions, OtelCollectorOptions, TraceExporter, MetricsExporter, WorkflowClientTrait};
 
 mod schema;
 mod db;
@@ -72,9 +74,66 @@ struct Args {
     action: Action,
 }
 
+
+fn get_server_options() -> ClientOptions {
+    let temporal_server_address = "http://localhost:7233".to_owned();
+    let url = Url::try_from(&*temporal_server_address).unwrap();
+    ClientOptionsBuilder::default()
+        .identity("integ_tester".to_string())
+        .target_url(url)
+        .client_name("temporal-core".to_string())
+        .client_version("0.1.0".to_string())
+        .build()
+        .unwrap()
+}
+
+pub fn get_integ_telem_options() -> TelemetryOptions {
+    let mut ob = TelemetryOptionsBuilder::default();
+    if let Some(url) = env::var("OTEL_URL_ENV_VAR")
+        .ok()
+        .map(|x| x.parse::<Url>().unwrap())
+    {
+        let opts = OtelCollectorOptions {
+            url,
+            headers: Default::default(),
+        };
+        ob.tracing(TraceExporter::Otel(opts.clone()));
+        ob.metrics(MetricsExporter::Otel(opts));
+    }
+    if let Some(addr) = env::var("PROM_ENABLE_ENV_VAR")
+        .ok()
+        .map(|x| SocketAddr::new([127, 0, 0, 1].into(), x.parse().unwrap()))
+    {
+        ob.metrics(MetricsExporter::Prometheus(addr));
+    }
+    ob.tracing_filter(env::var("RUST_LOG").unwrap_or_else(|_| "temporal_sdk_core=INFO".to_string()))
+        .logging(Logger::Console)
+        .build()
+        .unwrap()
+}
+
 #[actix_web::main]
 async fn main() -> io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
+    telemetry_init(&get_integ_telem_options()).expect("Telemetry inits cleanly");
+    let worker_cfg = WorkerConfigBuilder::default()
+        .namespace("default")
+        .task_queue("task_queue")
+        .worker_build_id("worker_build_id")
+        .build()
+        .expect("Configuration options construct properly");
+
+    let client = Arc::new(
+        get_server_options()
+            .connect(worker_cfg.namespace.clone(), None, None)
+            .await
+            .expect("Must connect"),
+    );
+
+    let _worker = init_worker(worker_cfg, client);
+
+    // client.start_workflow()
 
     let args = Args::parse();
 
