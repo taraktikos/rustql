@@ -31,3 +31,5 @@ chrono = { version = "0.4.19", default-features = false, features = ["clock", "s
 clap = { version = "4.0.17", features = ["derive"] }
 
 temporal-sdk-core = { git = 'https://github.com/temporalio/sdk-core', rev = "48c9dcd" }
+
+lettre = "0.10.1"

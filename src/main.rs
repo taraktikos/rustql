@@ -4,7 +4,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use actix_cors::Cors;
-use actix_web::{App, HttpRequest, HttpResponse, HttpServer, middleware, Responder, route, web, get};
+use actix_web::{App, get, HttpRequest, HttpResponse, HttpServer, middleware, Responder, route, web};
 use actix_web::Error;
 use actix_web::web::Data;
 use actix_web_lab::respond::Html;
@@ -14,14 +14,15 @@ use context::GraphQLContext;
 use db::{get_pool, PostgresPool};
 use schema::{create_schema, Schema};
 use juniper_graphql_ws::ConnectionConfig;
-use juniper_actix::{subscriptions::subscriptions_handler};
+use juniper_actix::subscriptions::subscriptions_handler;
 use clap::{Parser, Subcommand};
-use temporal_sdk_core::{init_worker, Url, WorkerConfigBuilder, ClientOptionsBuilder, ClientOptions, telemetry_init, Logger, TelemetryOptionsBuilder, TelemetryOptions, OtelCollectorOptions, TraceExporter, MetricsExporter, WorkflowClientTrait};
+use temporal_sdk_core::{ClientOptions, ClientOptionsBuilder, init_worker, Logger, MetricsExporter, OtelCollectorOptions, telemetry_init, TelemetryOptions, TelemetryOptionsBuilder, TraceExporter, Url, WorkerConfigBuilder};
 
 mod schema;
 mod db;
 mod context;
 mod diesel_schema;
+mod mailer;
 
 #[route("/graphql", method = "GET", method = "POST")]
 async fn graphql(
@@ -64,6 +65,7 @@ async fn graphql_playground() -> impl Responder {
 enum Action {
     Generate,
     Serve,
+    SendEmail,
 }
 
 
@@ -140,6 +142,7 @@ async fn main() -> io::Result<()> {
     match args.action {
         Action::Generate => generate().await,
         Action::Serve => serve().await,
+        Action::SendEmail => mailer::send_email().await,
     }
 }
 
